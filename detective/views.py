@@ -1,42 +1,28 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from django.contrib.auth import get_user_model
+
+from rest_framework import generics, permissions
 
 from .models import DetectiveReport, DetectiveReportStatus
 from .serializers import DetectiveReportCreateSerializer, DetectiveReportListSerializer
 
+User = get_user_model()
 
-class DetectiveReportCreateView(APIView):
+
+class DetectiveReportListCreateView(generics.ListCreateAPIView):
     """
-    POST /api/detective/
-    Yeni bir çevre sorunu bildirimi oluşturur.
-    """
-
-    def post(self, request):
-        serializer = DetectiveReportCreateSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        report = serializer.save(reporter=request.user)
-
-        return Response(
-            DetectiveReportListSerializer(report).data,
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class DetectiveReportListView(APIView):
-    """
-    GET /api/detective/
-    Haritada gösterilmek üzere PENDING ve CONFIRMED durumundaki aktif
-    sorun bildirimlerini listeler.
-
-    Opsiyonel query parametreleri:
-        ?problem_type=LITTERING   — türe göre filtrele
-        ?limit=50                 — sayfa başına kayıt (max 200)
+    GET  /api/detective/reports/  — Haritada gösterilecek aktif sorun bildirimlerini listeler.
+    POST /api/detective/reports/  — Yeni bir çevre sorunu bildirimi oluşturur.
     """
 
-    def get(self, request):
+    permission_classes = [permissions.AllowAny]
+    queryset = DetectiveReport.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return DetectiveReportCreateSerializer
+        return DetectiveReportListSerializer
+
+    def get_queryset(self):
         active_statuses = [
             DetectiveReportStatus.PENDING,
             DetectiveReportStatus.CONFIRMED,
@@ -47,14 +33,21 @@ class DetectiveReportListView(APIView):
             .order_by("-created_at")
         )
 
-        problem_type = request.query_params.get("problem_type")
+        problem_type = self.request.query_params.get("problem_type")
         if problem_type:
             qs = qs.filter(problem_type=problem_type)
 
         try:
-            limit = min(int(request.query_params.get("limit", 100)), 200)
+            limit = min(int(self.request.query_params.get("limit", 100)), 200)
         except (TypeError, ValueError):
             limit = 100
 
-        serializer = DetectiveReportListSerializer(qs[:limit], many=True)
-        return Response(serializer.data)
+        return qs[:limit]
+
+    def perform_create(self, serializer):
+        reporter = (
+            self.request.user
+            if self.request.user.is_authenticated
+            else User.objects.first()
+        )
+        serializer.save(reporter=reporter)

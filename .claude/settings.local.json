@@ -11,7 +11,8 @@
       "Bash(npx expo install:*)",
       "Bash(python3:*)",
       "Bash(source:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(python manage.py:*)"
     ]
   }
 }

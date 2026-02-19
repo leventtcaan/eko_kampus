@@ -1,6 +1,6 @@
 import google.generativeai as genai
 
-genai.configure(api_key="API_KEY_BURAYA_GELECEK")
+genai.configure(api_key="AIzaSyC1y6QnTQe6dZSqcFSH2WZEkmcA3Rp30f8")
 
 
 class AIVerificationService:

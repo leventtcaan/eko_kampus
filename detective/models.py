@@ -88,7 +88,15 @@ class DetectiveReport(models.Model):
         help_text=_("Coğrafi hesaplamayla otomatik doldurulur."),
     )
 
+    description = models.TextField(_("Açıklama"), blank=True)
+
     # Fotoğraf kanıtı
+    photo = models.ImageField(
+        _("Fotoğraf"),
+        upload_to="detective_photos/",
+        null=True,
+        blank=True,
+    )
     image_path = models.CharField(
         _("Fotoğraf Yolu"),
         max_length=500,

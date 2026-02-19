@@ -1,10 +1,9 @@
 from django.urls import path
 
-from .views import DetectiveReportCreateView, DetectiveReportListView
+from .views import DetectiveReportListCreateView
 
 app_name = "detective"
 
 urlpatterns = [
-    path("", DetectiveReportListView.as_view(), name="list"),
-    path("create/", DetectiveReportCreateView.as_view(), name="create"),
+    path("reports/", DetectiveReportListCreateView.as_view(), name="list-create"),
 ]
