@@ -1,11 +1,7 @@
-from django.contrib.auth import get_user_model
-
 from rest_framework import generics, permissions
 
 from .models import DetectiveReport, DetectiveReportStatus
 from .serializers import DetectiveReportCreateSerializer, DetectiveReportListSerializer
-
-User = get_user_model()
 
 
 class DetectiveReportListCreateView(generics.ListCreateAPIView):
@@ -14,7 +10,7 @@ class DetectiveReportListCreateView(generics.ListCreateAPIView):
     POST /api/detective/reports/  — Yeni bir çevre sorunu bildirimi oluşturur.
     """
 
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     queryset = DetectiveReport.objects.all()
 
     def get_serializer_class(self):
@@ -45,9 +41,4 @@ class DetectiveReportListCreateView(generics.ListCreateAPIView):
         return qs[:limit]
 
     def perform_create(self, serializer):
-        reporter = (
-            self.request.user
-            if self.request.user.is_authenticated
-            else User.objects.first()
-        )
-        serializer.save(reporter=reporter)
+        serializer.save(reporter=self.request.user)

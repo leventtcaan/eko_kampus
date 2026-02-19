@@ -14,7 +14,7 @@ from .serializers import WasteReportCreateSerializer, WasteReportDetailSerialize
 
 class WasteReportCreateView(APIView):
     """
-    POST /api/reports/
+    POST /api/reports/create/
     Yeni bir 'çöp atma' bildirimi oluşturur.
 
     İş mantığı:
@@ -30,7 +30,7 @@ class WasteReportCreateView(APIView):
         - fill_delta hesabı ve Bin.add_fill() çağrısı
     """
 
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         serializer = WasteReportCreateSerializer(
@@ -40,7 +40,7 @@ class WasteReportCreateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         report = serializer.save(
-            user=request.user if request.user.is_authenticated else User.objects.first(),
+            user=request.user,
             status=WasteReport.ReportStatus.PENDING if hasattr(WasteReport, "ReportStatus") else "PENDING",
         )
 
@@ -56,18 +56,9 @@ class WasteReportListView(APIView):
     Giriş yapmış kullanıcının kendi raporlarını listeler.
     """
 
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self, request):
-        if request.user.is_anonymous:
-            effective_user = User.objects.first()
-            if effective_user is None:
-                return WasteReport.objects.none()
-            return (
-                WasteReport.objects.filter(user=effective_user)
-                .select_related("bin", "photo_evidence")
-                .order_by("-created_at")[:50]
-            )
         return (
             WasteReport.objects.filter(user=request.user)
             .select_related("bin", "photo_evidence")
@@ -85,12 +76,10 @@ class TaskListAPIView(APIView):
     Kullanıcının bugünkü ilerlemesiyle birlikte statik görev listesini döner.
     """
 
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        effective_user = (
-            request.user if request.user.is_authenticated else User.objects.first()
-        )
+        effective_user = request.user
 
         today = timezone.now().date()
 
