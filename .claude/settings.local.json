@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/bin/python manage.py check:*)",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(venv/bin/pip freeze:*)",
+      "Bash(venv/bin/python manage.py show_urls:*)",
+      "Bash(venv/bin/python:*)",
+      "Bash(npx create-expo-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx expo install:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}
