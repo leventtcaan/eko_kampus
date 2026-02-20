@@ -117,11 +117,10 @@ class WasteReportCreateSerializer(serializers.ModelSerializer):
             base64_str = base64.b64encode(image_bytes).decode("utf-8") if not isinstance(photo, str) else photo
             if hasattr(photo, "seek"):
                 photo.seek(0)
-            is_valid = validate_waste_with_ai(base64_str, waste_category)
+            # Artık yapay zekadan gelen özel sebebi (ai_message) de alıyoruz
+            is_valid, ai_message = validate_waste_with_ai(base64_str, waste_category)
             if not is_valid:
-                raise serializers.ValidationError(
-                    {"photo": "Yapay Zeka Reddi: Görseldeki nesne seçilen atık türüyle eşleşmiyor!"}
-                )
+                raise serializers.ValidationError({"photo": ai_message})
 
         return attrs
 

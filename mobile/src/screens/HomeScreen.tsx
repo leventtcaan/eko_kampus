@@ -61,12 +61,9 @@ export default function HomeScreen() {
     }
   };
 
-  const openImageOptions = () => {
-    Alert.alert('Fotoğraf Ekle', 'Nasıl eklemek istersiniz?', [
-      { text: 'Kamerayı Aç', onPress: takePhoto },
-      { text: 'Galeriden Seç', onPress: pickImage },
-      { text: 'İptal', style: 'cancel' },
-    ]);
+ const openImageOptions = () => {
+    // Sadece kamera açılır, galeri seçeneği kaldırıldı
+    takePhoto();
   };
 
   const submitReport = async () => {
