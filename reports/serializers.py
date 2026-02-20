@@ -1,3 +1,5 @@
+import base64
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -5,7 +7,7 @@ from rest_framework import serializers
 
 from config.models import SystemSetting
 from .models import PhotoEvidence, ReportStatus, WasteReport
-from .services import AIVerificationService
+from .services import validate_waste_with_ai
 
 User = get_user_model()
 
@@ -108,6 +110,19 @@ class WasteReportCreateSerializer(serializers.ModelSerializer):
                 f"Bu kutuya aynı atık türünü son {rate_lock_minutes} dakika içinde zaten bildirdiniz."
             )
 
+        photo = attrs.get("photo_base64")
+        waste_category = attrs.get("waste_category")
+        if photo and waste_category:
+            image_bytes = photo.encode("utf-8") if isinstance(photo, str) else photo.read()
+            base64_str = base64.b64encode(image_bytes).decode("utf-8") if not isinstance(photo, str) else photo
+            if hasattr(photo, "seek"):
+                photo.seek(0)
+            is_valid = validate_waste_with_ai(base64_str, waste_category)
+            if not is_valid:
+                raise serializers.ValidationError(
+                    {"photo": "Yapay Zeka Reddi: Görseldeki nesne seçilen atık türüyle eşleşmiyor!"}
+                )
+
         return attrs
 
     def create(self, validated_data):
@@ -115,12 +130,7 @@ class WasteReportCreateSerializer(serializers.ModelSerializer):
         validated_data.pop("photo_evidence", None)  # reverse relation, ayrıca işlenmez
 
         if photo_base64:
-            approved, _ = AIVerificationService().verify_waste(
-                photo_base64, validated_data.get("waste_category", "")
-            )
-            validated_data["status"] = (
-                ReportStatus.APPROVED if approved else ReportStatus.REJECTED
-            )
+            validated_data["status"] = ReportStatus.APPROVED
 
         return WasteReport.objects.create(**validated_data)
 

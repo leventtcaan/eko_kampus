@@ -1,29 +1,57 @@
-import google.generativeai as genai
+import requests
 
-genai.configure(api_key="AIzaSyC1y6QnTQe6dZSqcFSH2WZEkmcA3Rp30f8")
+from django.conf import settings
 
 
-class AIVerificationService:
-    """
-    Fotoğraf tabanlı atık doğrulama servisi — Gemini Vision API.
-    """
+def validate_waste_with_ai(base64_image: str, category: str) -> bool:
+    if "," in base64_image:
+        base64_image = base64_image.split(",")[1]
 
-    def verify_waste(self, photo_base64: str, claimed_category: str) -> tuple[bool, str]:
-        try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+    url = "https://api.groq.com/openai/v1/chat/completions"
 
-            prompt = (
-                f"Sen bir geri dönüşüm uzmanısın. Bu fotoğraftaki atık, "
-                f"{claimed_category} kategorisine (PLASTIC, PAPER, GLASS, ORGANIC) "
-                f"uygun mu? Sadece 'EVET' veya 'HAYIR' olarak cevap ver."
-            )
-            image_parts = [{"mime_type": "image/jpeg", "data": photo_base64}]
+    headers = {
+        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
-            response = model.generate_content([image_parts[0], prompt])
+    payload = {
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}",
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Kullanıcı bu fotoğrafta {category} türünde bir atık olduğunu iddia ediyor. "
+                            "Fotoğrafta açıkça bu atık var mı? "
+                            "Eğer fotoğrafta sadece bir insan eli, yüzü veya alakasız bir nesne varsa reddet. "
+                            "Sadece EVET veya HAYIR kelimesiyle yanıt ver."
+                        ),
+                    },
+                ],
+            }
+        ],
+        "max_tokens": 10,
+        "temperature": 0,
+    }
 
-            if "EVET" in response.text.upper():
-                return True, "Onaylandı"
-            return False, "Reddedildi"
-
-        except Exception as e:
-            return False, str(e)
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=20)
+        response.raise_for_status()
+        text = response.json()["choices"][0]["message"]["content"]
+        return "EVET" in text.upper()
+    except requests.exceptions.RequestException as e:
+        print(f"Groq API Hatası: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            print(e.response.text)
+        return False
+    except Exception as e:
+        print(f"Genel Hata: {e}")
+        return False
